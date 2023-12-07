@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   daisyui:
     specifier: ^4.4.19
@@ -13,6 +17,9 @@ dependencies:
   react-dom:
     specifier: ^18
     version: 18.0.0(react@18.0.0)
+  react-icons:
+    specifier: ^4.12.0
+    version: 4.12.0(react@18.0.0)
 
 devDependencies:
   '@types/node':
@@ -764,6 +771,14 @@ packages:
       loose-envify: 1.4.0
       react: 18.0.0
       scheduler: 0.21.0
+    dev: false
+
+  /react-icons@4.12.0(react@18.0.0):
+    resolution: {integrity: sha512-IBaDuHiShdZqmfc/TwHu6+d6k2ltNCf3AszxNmjJc1KUfXdEeRJOKyNvLmAHaarhzGmTSVygNdyu8/opXv2gaw==}
+    peerDependencies:
+      react: '*'
+    dependencies:
+      react: 18.0.0
     dev: false
 
   /react@18.0.0:
