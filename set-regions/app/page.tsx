@@ -2,23 +2,28 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import Draggable, {
+  DraggableCore,
+  DraggableEventHandler,
+} from "react-draggable";
 import { IoTrashOutline } from "react-icons/io5";
 
 export default function Home() {
-  const [points, setPoints] = useState([[0.3, 0.5]]);
-  const [lines, setLines] = useState([
-    [
-      [0.1, 0.1],
-      [0.2, 0.2],
-    ],
+  const [point, setPoint] = useState<number[] | null>(null);
+  const [lines, setLines] = useState<number[][]>([
+    [0.1, 0.1, 0.2, 0.2],
+    [0.5, 0.7, 0.3, 0.4],
   ]);
-  const [num, setNum] = useState(3);
+  const [active, setActive] = useState<number | null>(null);
 
   const canvasRef = useRef<SVGSVGElement>(null);
   const [canvasSize, setCanvasSize] = useState<{ w: number; h: number }>({
     w: 100,
     h: 100,
   });
+  const fileRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
   const updateCanvasSize = () => {
     if (canvasRef.current) {
       setCanvasSize({
@@ -27,27 +32,61 @@ export default function Home() {
       });
     }
   };
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      if (point) {
+        setPoint(null);
+        setActive(null);
+      }
+    }
+    if (e.key === "Backspace") {
+      if (active !== null) {
+        deleteLine(active);
+        setActive(null);
+      }
+    }
+  };
   useEffect(() => {
     updateCanvasSize();
-
     window.addEventListener("resize", updateCanvasSize);
-
-    () => {
+    imageRef.current?.addEventListener("load", updateCanvasSize);
+    return () => {
       window.removeEventListener("resize", updateCanvasSize);
+      imageRef.current?.removeEventListener("load", updateCanvasSize);
     };
   }, []);
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [active, point]);
 
   const createItem = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      const point = [e.clientX / canvasSize.w, e.clientY / canvasSize.h];
-      setPoints([...points, point]);
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = [
+        (e.clientX - rect.x) / canvasSize.w,
+        (e.clientY - rect.y) / canvasSize.h,
+      ];
+      if (point) {
+        setActive(lines.length);
+        setLines([...lines, [...point, ...pos]]);
+        setPoint(null);
+      } else {
+        setActive(null);
+        setPoint(pos);
+      }
     }
+  };
+  const deleteLine = (index: number) => {
+    setLines(lines.filter((v, i) => i !== index));
   };
 
   return (
     <main className="max-w-screen-lg mx-auto">
       <div className="relative w-full">
-        <img src="/sample.png" alt="" className="w-full" />
+        <img ref={imageRef} src="/sample.png" alt="" className="w-full" />
         <svg
           ref={canvasRef}
           className="absolute top-0 left-0 right-0 bottom-0 "
@@ -56,40 +95,36 @@ export default function Home() {
           preserveAspectRatio="false"
           onMouseDown={createItem}
         >
-          <defs>
-            <marker
-              id="arrow"
-              viewBox="0 0 10 10"
-              refX="5"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 10 5 L 0 10 z" />
-            </marker>
-          </defs>
-          {points.map(([x, y]) => (
+          {point && (
             <circle
-              onClick={() => {
-                console.log("click");
-              }}
+              onClick={() => {}}
               onDrag={() => {}}
-              cx={`${x * 100}%`}
-              cy={`${y * 100}%`}
+              cx={`${point[0] * 100}%`}
+              cy={`${point[1] * 100}%`}
               r={4}
               fill="white"
               strokeWidth={2}
-              stroke="#f0f"
+              stroke="cyan"
             ></circle>
-          ))}
+          )}
 
           {lines.map((vs, i) => {
-            const [[x1, y1], [x2, y2]] = vs;
+            const [x1, y1, x2, y2] = vs;
             const [cx, cy] = [(x1 + x2) / 2, (y1 + y2) / 2];
-            const [x1p, y1p, x2p, y2p, cxp, cyp] = [x1, y1, x2, y2, cx, cy].map(
+            const [x1p, y1p, x2p, y2p, cxp, cyp] = [...vs, cx, cy].map(
               (v) => `${v * 100}%`
             );
+            const [dx, dy] = [x2 - x1, y2 - y1];
+            const absD = Math.abs(dx) + Math.abs(dy);
+            const [nx, ny] = [dy / absD, -dx / absD];
+            const dl = 24;
+            const [xIn, yIn, xOut, yOut] = [
+              cx * canvasSize.w - nx * dl,
+              cy * canvasSize.h - ny * dl,
+              cx * canvasSize.w + nx * dl,
+              cy * canvasSize.h + ny * dl,
+            ];
+            const color = i == active ? "aqua" : "magenta";
             return (
               <>
                 <line
@@ -98,28 +133,60 @@ export default function Home() {
                   x2={x2p}
                   y2={y2p}
                   strokeWidth={2}
-                  stroke="aqua"
-                  markerStart="url(#arrow)"
+                  stroke={color}
+                  onMouseDown={() => setActive(i)}
                 />
-                <text x={cxp} y={cyp} fill="aqua">
+                <text x={cxp} y={cyp} fill={color}>
                   {i}
                 </text>
-                <circle
-                  cx={x1p}
-                  cy={y1p}
-                  r={4}
-                  fill="white"
-                  strokeWidth={2}
-                  stroke="aqua"
-                />
-                <circle
-                  cx={x2p}
-                  cy={y2p}
-                  r={4}
-                  fill="white"
-                  strokeWidth={2}
-                  stroke="aqua"
-                />
+                <text x={xIn} y={yIn} className="text-xs" fill={color}>
+                  In
+                </text>
+                <text x={xOut} y={yOut} className="text-xs" fill={color}>
+                  Out
+                </text>
+                <DraggableCore
+                  onDrag={(e, data) => {
+                    const [x, y] = [
+                      lines[i][0] + data.deltaX / canvasSize.w,
+                      lines[i][1] + data.deltaY / canvasSize.h,
+                    ];
+                    lines[i][0] = x;
+                    lines[i][1] = y;
+                    setLines([...lines]);
+                  }}
+                  onMouseDown={(e) => setActive(i)}
+                >
+                  <circle
+                    cx={x1p}
+                    cy={y1p}
+                    r={4}
+                    fill="white"
+                    strokeWidth={2}
+                    stroke={color}
+                  />
+                </DraggableCore>
+                <DraggableCore
+                  onDrag={(e, data) => {
+                    const [x, y] = [
+                      lines[i][2] + data.deltaX / canvasSize.w,
+                      lines[i][3] + data.deltaY / canvasSize.h,
+                    ];
+                    lines[i][2] = x;
+                    lines[i][3] = y;
+                    setLines([...lines]);
+                  }}
+                  onMouseDown={(e) => setActive(i)}
+                >
+                  <circle
+                    cx={x2p}
+                    cy={y2p}
+                    r={4}
+                    fill="white"
+                    strokeWidth={2}
+                    stroke={color}
+                  />
+                </DraggableCore>
               </>
             );
           })}
@@ -133,40 +200,71 @@ export default function Home() {
               <th></th>
               <th>Vertex1</th>
               <th>Vertex2</th>
-              <th>Flow Out</th>
+              <th>Flip</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {points.map(([x, y], i) => (
-              <Item index={i} x={x} y={y} />
-            ))}
+            {lines.map((vs, i) => {
+              const [x1, y1, x2, y2] = vs.map((v) => v.toFixed(3));
+              return (
+                <tr>
+                  <th>{i}</th>
+                  <td>{`(${x1},${y1})`}</td>
+                  <td>{`(${x2},${y2})`}</td>
+                  <td>
+                    <button
+                      className="btn btn-xs btn-info"
+                      onClick={() => {
+                        lines[i] = [vs[2], vs[3], vs[0], vs[1]];
+                        setLines([...lines]);
+                      }}
+                    >
+                      Flip
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-ghost btn-circle btn-sm"
+                      onClick={() => deleteLine(i)}
+                    >
+                      <IoTrashOutline />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-
-      <button className="btn btn-secondary" onClick={() => setNum(num + 1)}>
-        Add Region
-      </button>
-      <button className="btn btn-primary">OK</button>
-    </main>
-  );
-}
-
-function Item({ index, x, y }: { index: number; x: number; y: number }) {
-  return (
-    <tr>
-      <th>{index}</th>
-      <td>{x}</td>
-      <td>{y}</td>
-      <td>
-        <input type="checkbox" className="toggle toggle-info" defaultChecked />
-      </td>
-      <td>
-        <button className="btn btn-ghost btn-circle btn-sm">
-          <IoTrashOutline />
+      <div className="mt-4 flex gap-4">
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            fileRef.current?.click();
+          }}
+        >
+          Open Video
         </button>
-      </td>
-    </tr>
+        <button className="btn btn-primary">Export as JSON</button>
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*,image/*"
+        onChange={(e) => {
+          if (e.target.files) {
+            const file = e.target.files[0];
+            const fileName = file.name;
+            const reader = new FileReader();
+            reader.addEventListener("load", (r) => {
+              imageRef.current!.src = reader.result as string;
+            });
+            reader.readAsDataURL(file);
+          } else {
+          }
+        }}
+      />
+    </main>
   );
 }
