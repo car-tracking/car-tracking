@@ -3,12 +3,15 @@ name: Deploy Web App
 on:
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: set-regions
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cd set-regions
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -19,11 +22,11 @@ jobs:
       - run: pnpm build
       - uses: actions/upload-artifact@v3
         with:
-          name: web-app
-          path: out
+          name: set-regions
+          path: set-regions/out
       - uses: actions/upload-pages-artifact@v1
         with:
-          path: out
+          path: set-regions/out
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -34,5 +37,5 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/deploy-pages@v1
+      - uses: actions/deploy-pages@v3
         id: deployment
