@@ -10,11 +10,9 @@ import { IoTrashOutline } from "react-icons/io5";
 
 export default function Home() {
   const [point, setPoint] = useState<number[] | null>(null);
-  const [lines, setLines] = useState<number[][]>([
-    [0.1, 0.1, 0.2, 0.2],
-    [0.5, 0.7, 0.3, 0.4],
-  ]);
+  const [lines, setLines] = useState<number[][]>([]);
   const [active, setActive] = useState<number | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const canvasRef = useRef<SVGSVGElement>(null);
   const [canvasSize, setCanvasSize] = useState<{ w: number; h: number }>({
@@ -22,7 +20,9 @@ export default function Home() {
     h: 100,
   });
   const fileRef = useRef<HTMLInputElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
+  const jsonRef = useRef<HTMLAnchorElement>(null);
+  // const imageRef = useRef<HTMLImageElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const updateCanvasSize = () => {
     if (canvasRef.current) {
@@ -49,10 +49,10 @@ export default function Home() {
   useEffect(() => {
     updateCanvasSize();
     window.addEventListener("resize", updateCanvasSize);
-    imageRef.current?.addEventListener("load", updateCanvasSize);
+    videoRef.current?.addEventListener("loadedmetadata", updateCanvasSize);
     return () => {
       window.removeEventListener("resize", updateCanvasSize);
-      imageRef.current?.removeEventListener("load", updateCanvasSize);
+      videoRef.current?.removeEventListener("loadedmetadata", updateCanvasSize);
     };
   }, []);
   useEffect(() => {
@@ -86,7 +86,10 @@ export default function Home() {
   return (
     <main className="max-w-screen-lg mx-auto">
       <div className="relative w-full">
-        <img ref={imageRef} src="/sample.png" alt="" className="w-full" />
+        <video
+          ref={videoRef}
+          className="w-full select-none pointer-events-none"
+        />
         <svg
           ref={canvasRef}
           className="absolute top-0 left-0 right-0 bottom-0 "
@@ -134,8 +137,30 @@ export default function Home() {
                   y2={y2p}
                   strokeWidth={2}
                   stroke={color}
-                  onMouseDown={() => setActive(i)}
                 />
+                <DraggableCore
+                  onDrag={(e, data) => {
+                    const line = [
+                      lines[i][0] + data.deltaX / canvasSize.w,
+                      lines[i][1] + data.deltaY / canvasSize.h,
+                      lines[i][2] + data.deltaX / canvasSize.w,
+                      lines[i][3] + data.deltaY / canvasSize.h,
+                    ];
+                    lines[i] = line;
+                    setLines([...lines]);
+                  }}
+                  onMouseDown={(e) => setActive(i)}
+                >
+                  <line
+                    x1={x1p}
+                    y1={y1p}
+                    x2={x2p}
+                    y2={y2p}
+                    strokeWidth={24}
+                    stroke="transparent"
+                  />
+                </DraggableCore>
+
                 <text x={cxp} y={cyp} fill={color}>
                   {i}
                 </text>
@@ -246,25 +271,46 @@ export default function Home() {
         >
           Open Video
         </button>
-        <button className="btn btn-primary">Export as JSON</button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            const json = JSON.stringify(lines, null, 2);
+            const blob = new Blob([json], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = jsonRef.current!;
+            a.download = fileName
+              ? [...fileName.split(".").slice(0, -1), "json"].join(".")
+              : "region.json";
+            a.href = url;
+            a.click();
+          }}
+        >
+          Export as JSON
+        </button>
       </div>
       <input
         ref={fileRef}
         type="file"
-        accept="video/*,image/*"
+        accept="video/*"
+        className="hidden"
         onChange={(e) => {
           if (e.target.files) {
             const file = e.target.files[0];
             const fileName = file.name;
             const reader = new FileReader();
             reader.addEventListener("load", (r) => {
-              imageRef.current!.src = reader.result as string;
+              videoRef.current!.src = reader.result as string;
+              setLines([]);
+              setPoint(null);
+              setActive(null);
+              setFileName(fileName);
             });
             reader.readAsDataURL(file);
           } else {
           }
         }}
       />
+      <a ref={jsonRef} className="hidden"></a>
     </main>
   );
 }
