@@ -1,0 +1,38 @@
+name: Deploy Web App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd set-regions
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - run: pnpm i
+      - run: pnpm build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: web-app
+          path: out
+      - uses: actions/upload-pages-artifact@v1
+        with:
+          path: out
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v1
+        id: deployment
