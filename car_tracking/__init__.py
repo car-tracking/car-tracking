@@ -82,6 +82,9 @@ def track(
 
 
 def create_yolo_model() -> YOLO:
+    """YOLOモデルの作成"""
+
+    # GPUが使用可能ならGPUを使用
     device = torch.device("cpu")
     if torch.backends.mps.is_available():
         device = torch.device("mps")
