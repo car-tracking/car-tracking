@@ -6,7 +6,10 @@ import cv2 as cv
 
 
 def track(
-    source: str, lines: list[list[float]], output: str = None, show: bool = False
+    source: str,
+    lines: list[list[float]],
+    output: str = None,
+    no_show: bool = False,
 ):
     """
     トラッキングを実行
@@ -33,9 +36,15 @@ def track(
     ]
 
     # アノテーターの設定
-    box_annotator = sv.BoxAnnotator()
+    colors = sv.ColorPalette.default().colors
+    box_annotator = sv.BoxAnnotator(thickness=1, text_scale=0.25, text_padding=5)
     trace_annotator = sv.TraceAnnotator(trace_length=30)
-    line_zone_annotator = sv.LineZoneAnnotator()
+    line_zone_annotators = [
+        sv.LineZoneAnnotator(
+            color=colors[i], text_scale=0.4, text_thickness=1, text_padding=5
+        )
+        for i, _ in enumerate(lines)
+    ]
 
     # (optional) 結果の出力先ファイルを作成
     if output is not None:
@@ -57,18 +66,18 @@ def track(
 
         # アノテーション処理
         labels = [
-            f"{tracker_id} {class_names[class_id]} {confidence:0.2f}"
-            for _, _, confidence, class_id, tracker_id in detections
+            f"{tracker_id} {class_names[class_id]}"
+            for xyxy, mask, confidence, class_id, tracker_id in detections
         ]
         frame = box_annotator.annotate(frame, detections, labels)
         frame = trace_annotator.annotate(frame, detections)
-        for line_zone in line_zones:
+        for line_zone, line_zone_annotator in zip(line_zones, line_zone_annotators):
             line_zone_annotator.annotate(frame, line_zone)
 
         # (optional) リアルタイムで結果を描画する
-        if show:
+        if not no_show:
             cv.imshow("track", frame)
-            keyboard = cv.waitKey(30)
+            keyboard = cv.waitKey(1)
             if keyboard == "q" or keyboard == 27:
                 break
 
