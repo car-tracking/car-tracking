@@ -15,6 +15,7 @@ def track(
     # 動画の読み込み
     video = sv.get_video_frames_generator(source)
     video_info = sv.VideoInfo.from_video_path(source)
+    (width, height) = video_info.resolution_wh
 
     # モデルの初期化
     model = create_yolo_model()
@@ -22,13 +23,19 @@ def track(
     classes = [2, 3, 5, 7]
     class_names = model.model.names
 
-    # TODO: トラッキングする線分を設定
-    for line in lines:
-        [x1, y1, x2, y2] = line
+    # ラインゾーンを設定
+    line_zones = [
+        sv.LineZone(
+            sv.Point(x2 * width, y2 * height),
+            sv.Point(x1 * width, y1 * height),
+        )
+        for [x1, y1, x2, y2] in lines
+    ]
 
     # アノテーターの設定
     box_annotator = sv.BoxAnnotator()
     trace_annotator = sv.TraceAnnotator(trace_length=30)
+    line_zone_annotator = sv.LineZoneAnnotator()
 
     # (optional) 結果の出力先ファイルを作成
     if output is not None:
@@ -44,6 +51,10 @@ def track(
         # Bytetrackでトラッキング
         detections = byte_tracker.update_with_detections(detections)
 
+        # 線分を通過した車両をカウント
+        for line_zone in line_zones:
+            (flow_in, flow_out) = line_zone.trigger(detections)
+
         # アノテーション処理
         labels = [
             f"{tracker_id} {class_names[class_id]} {confidence:0.2f}"
@@ -51,6 +62,8 @@ def track(
         ]
         frame = box_annotator.annotate(frame, detections, labels)
         frame = trace_annotator.annotate(frame, detections)
+        for line_zone in line_zones:
+            line_zone_annotator.annotate(frame, line_zone)
 
         # (optional) リアルタイムで結果を描画する
         if show:
