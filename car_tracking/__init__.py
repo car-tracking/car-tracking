@@ -38,7 +38,9 @@ def track(
 
     num_lines = len(line_zones)
 
+    # 線を越えた数を格納するリスト
     inout_num = []
+    # 線を越えた数を車種別に格納するリスト
     inout_class_num = []
 
     for i in range(num_lines):
@@ -75,9 +77,7 @@ def track(
         count = 0
         # 線分を通過した車両をカウント
         for line_zone, line_zone_annotator in zip(line_zones, line_zone_annotators):
-            X = line_zone.trigger(detections)
-            cross_in = X[0]
-            cross_out = X[1]
+            cross_in, cross_out = line_zone.trigger(detections)
             if inout_num[count][0] != line_zone.in_count:
                 inout_num[count][0] = line_zone.in_count
 
