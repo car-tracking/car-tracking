@@ -25,7 +25,7 @@ def track(
     byte_tracker = sv.ByteTrack(frame_rate=video_info.fps)
     classes = [2, 3, 5, 7]
     class_names = model.model.names
-    num_classes=len(classes)
+    num_classes = len(classes)
 
     # ラインゾーンを設定
     line_zones = [
@@ -36,17 +36,16 @@ def track(
         for [x1, y1, x2, y2] in lines
     ]
 
-    num_lines=len(line_zones)
-    
-    inout_num=[]
-    inout_class_num=[]
-    
+    num_lines = len(line_zones)
+
+    inout_num = []
+    inout_class_num = []
+
     for i in range(num_lines):
-        inout_num.append([0,0])
+        inout_num.append([0, 0])
         inout_class_num.append([])
         for j in range(num_classes):
-            inout_class_num[i].append([0,0])
-
+            inout_class_num[i].append([0, 0])
 
     # アノテーターの設定
     colors = sv.ColorPalette.default().colors
@@ -73,35 +72,35 @@ def track(
         # Bytetrackでトラッキング
         detections = byte_tracker.update_with_detections(detections)
 
-        count=0
+        count = 0
         # 線分を通過した車両をカウント
         for line_zone, line_zone_annotator in zip(line_zones, line_zone_annotators):
-            X=line_zone.trigger(detections)
-            cross_in=X[0]
-            cross_out=X[1]
-            if inout_num[count][0]!=line_zone.in_count:
-                inout_num[count][0]=line_zone.in_count
+            X = line_zone.trigger(detections)
+            cross_in = X[0]
+            cross_out = X[1]
+            if inout_num[count][0] != line_zone.in_count:
+                inout_num[count][0] = line_zone.in_count
 
-            if inout_num[count][1]!=line_zone.out_count:
-                inout_num[count][1]=line_zone.out_count
-            
-            #class:numpy.ndarray
-            class_ids=detections.class_id
-            tracker_ids=detections.tracker_id
+            if inout_num[count][1] != line_zone.out_count:
+                inout_num[count][1] = line_zone.out_count
 
-            n=len(class_ids)
-        
+            # class:numpy.ndarray
+            class_ids = detections.class_id
+            tracker_ids = detections.tracker_id
+
+            n = len(class_ids)
+
             for k in range(n):
                 if class_ids[k] in classes:
                     if cross_in[k]:
-                       key=classes.index(class_ids[k])
-                       inout_class_num[count][key][0]+=1
+                        key = classes.index(class_ids[k])
+                        inout_class_num[count][key][0] += 1
                     if cross_out[k]:
-                       key=classes.index(class_ids[k])
-                       inout_class_num[count][key][1]+=1
+                        key = classes.index(class_ids[k])
+                        inout_class_num[count][key][1] += 1
 
-            count+=1
-            count%=num_lines
+            count += 1
+            count %= num_lines
 
             print(inout_num)
             print(inout_class_num)
