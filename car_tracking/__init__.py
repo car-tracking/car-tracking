@@ -78,7 +78,7 @@ def track(
         if not no_show:
             cv.imshow("track", frame)
             keyboard = cv.waitKey(1)
-            if keyboard == "q" or keyboard == 27:
+            if keyboard == "q" or keyboard == 27: # esc
                 break
 
         # (optional) 動画を書き出し
