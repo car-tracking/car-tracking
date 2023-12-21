@@ -56,6 +56,10 @@ def track(
     flow_ins = dict()
     counts = np.zeros((len(lines), len(lines)), dtype=np.int16)
 
+    # 車種ごとのin/out
+    counts_in_for_types = {class_id: np.zeros(len(lines)) for class_id in classes}
+    counts_out_for_types = {class_id: np.zeros(len(lines)) for class_id in classes}
+
     # 動画の各フレームに対して処理を実行
     for frame in tqdm(video, total=video_info.total_frames):
         # YOLOで物体検出
@@ -67,16 +71,30 @@ def track(
 
         # 線分を通過した車両をカウント
         for i, line_zone in enumerate(line_zones):
-            (flow_in, flow_out) = line_zone.trigger(detections)
+            flow_in, flow_out = line_zone.trigger(detections)
 
-            for detect, tracker_id in zip(flow_in, detections.tracker_id):
+            # 流入車両の処理
+            for detect, tracker_id, class_id in zip(
+                flow_in,
+                detections.tracker_id,
+                detections.class_id,
+            ):
                 if detect:
                     flow_ins[tracker_id] = i
-            for detect, tracker_id in zip(flow_out, detections.tracker_id):
+                    counts_in_for_types[class_id][i] += 1
+
+            # 流出車両の処理
+            for detect, tracker_id, class_id in zip(
+                flow_out,
+                detections.tracker_id,
+                detections.class_id,
+            ):
                 if detect and tracker_id in flow_ins:
                     from_line = flow_ins[tracker_id]
                     to_line = i
                     counts[to_line][from_line] += 1
+                if detect:
+                    counts_out_for_types[class_id][i] += 1
 
         # アノテーション処理
         labels = [
