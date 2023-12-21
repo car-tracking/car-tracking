@@ -67,7 +67,7 @@ def track(
         # 線分を通過した車両をカウント
         for i, line_zone in enumerate(line_zones):
             (flow_in, flow_out) = line_zone.trigger(detections)
-    
+
             for j, detect in enumerate(flow_in):
                 if detect == True:
                     flow_ins[detections.tracker_id[j]] = i
@@ -75,7 +75,7 @@ def track(
                 if detect == True and detections.tracker_id[j] in flow_ins:
                     from_line = flow_ins[detections.tracker_id[j]]
                     to_line = i
-                    counts[to_line][from_line] += 1          
+                    counts[to_line][from_line] += 1
 
         # アノテーション処理
         labels = [
@@ -90,23 +90,25 @@ def track(
         # draw_textでカウントを表示
         for to_line, line_zone in enumerate(line_zones):
             x1, y1, x2, y2 = lines[to_line]
-            #print(lines[to_line])
+            # print(lines[to_line])
             for from_line, line_zone in enumerate(line_zones):
                 count = counts[to_line][from_line]
-                text_anchor = sv.Point(x=int(x1*width), y=int(y1*height) + 20*from_line)
+                text_anchor = sv.Point(
+                    x=int(x1 * width), y=int(y1 * height) + 20 * from_line
+                )
                 frame = sv.draw_text(
-                    scene = frame,
+                    scene=frame,
                     text=str(count),
-                    text_padding = 5,
-                    text_scale = 0.5,
-                    text_anchor= text_anchor,
+                    text_padding=5,
+                    text_scale=0.5,
+                    text_anchor=text_anchor,
                     background_color=colors[from_line],
                 )
         # (optional) リアルタイムで結果を描画する
         if not no_show:
             cv.imshow("track", frame)
             keyboard = cv.waitKey(1)
-            if keyboard == "q" or keyboard == 27: # esc
+            if keyboard == "q" or keyboard == 27:  # esc
                 break
 
         # (optional) 動画を書き出し
