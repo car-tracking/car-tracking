@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import car_tracking
 import sys
+import numpy as np
 
 
 def cli(
@@ -18,22 +19,11 @@ def cli(
     with open(regions) as f:
         lines: list[list[float]] = json.load(f)
 
-    car_tracking.track(source, lines, output, no_show)
+    if bench is not None:
+        with open(bench) as f:
+            bench = json.load(f)
 
-    with open(bench) as f:
-        bench_file = json.load(f)
-        kind = bench_file["kind"]
-        data = bench_file["data"]
-
-        if kind == "line":
-            pass
-        elif kind == "from_to":
-            pass
-        elif kind == "type":
-            pass
-        else:
-            print("error: kind is invalid.", file=sys.stderr)
-            return
+    car_tracking.track(source, lines, output, no_show, bench)
 
 
 if __name__ == "__main__":
