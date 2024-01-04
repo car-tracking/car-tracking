@@ -4,6 +4,7 @@ import supervision as sv
 from tqdm import tqdm
 import cv2 as cv
 import numpy as np
+import sys
 
 
 def track(
@@ -11,6 +12,7 @@ def track(
     lines: list[list[float]],
     output: str = None,
     no_show: bool = False,
+    bench=None,
 ):
     """
     トラッキングを実行
@@ -137,6 +139,74 @@ def track(
     # (optional) 出力ファイルの開放
     if output:
         writer.release()
+
+    if bench is not None:
+        kind = bench["kind"]
+        data = bench["data"]
+
+        if kind == "line":
+            counts_in = np.array([line_zone.in_count for line_zone in line_zones])
+            counts_out = np.array([line_zone.out_count for line_zone in line_zones])
+            bench_in = np.array(data["in"])
+            bench_out = np.array(data["out"])
+            print("counts_in", counts_in)
+            print("counts_out", counts_out)
+            print("bench_in", bench_in)
+            print("bench_out", bench_out)
+
+            min_in = np.minimum(counts_in, bench_in)
+            min_out = np.minimum(counts_out, bench_out)
+
+            recall = (min_in.sum() + min_out.sum()) / (bench_in.sum() + bench_out.sum())
+            precision = (min_in.sum() + min_out.sum()) / (
+                counts_in.sum() + counts_out.sum()
+            )
+
+            print(f"Recall: {recall:.3f}, Precision: {precision:.3f}")
+
+        elif kind == "from_to":
+            bench_counts = np.array(data)
+            print("bench", bench_counts)
+            print("counts", counts.T)
+
+            min_counts = np.minimum(counts.T, bench_counts)
+            recall = min_counts.sum() / bench_counts.sum()
+            precision = min_counts.sum() / counts.T.sum()
+
+            print(f"Recall: {recall:.3f}, Precision: {precision:.3f}")
+
+        elif kind == "type":
+            benches = {int(k): v for k, v in data.items()}
+            for class_id, bench in benches.items():
+                print(
+                    f"=== {class_names[class_id]}(id: {class_id}) ===",
+                )
+
+                counts_in = counts_in_for_types[class_id]
+                counts_out = counts_out_for_types[class_id]
+                bench_in = np.array(bench["in"])
+                bench_out = np.array(bench["out"])
+                print("counts_in", counts_in)
+                print("counts_out", counts_out)
+                print("bench_in", bench_in)
+                print("bench_out", bench_out)
+
+                min_in = np.minimum(counts_in, bench_in)
+                min_out = np.minimum(counts_out, bench_out)
+
+                recall = (min_in.sum() + min_out.sum()) / (
+                    bench_in.sum() + bench_out.sum()
+                )
+                precision = (min_in.sum() + min_out.sum()) / (
+                    counts_in.sum() + counts_out.sum()
+                )
+
+                print(f"Recall: {recall:.3f}, Precision: {precision:.3f}")
+                print()
+
+        else:
+            print("error: kind is invalid.", file=sys.stderr)
+            return
 
 
 def create_yolo_model() -> YOLO:
